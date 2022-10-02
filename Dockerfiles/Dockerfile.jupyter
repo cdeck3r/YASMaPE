@@ -1,0 +1,19 @@
+#
+# jupyter image for YASMaPE
+#
+
+FROM jupyter/scipy-notebook:latest
+
+LABEL description="jupyterlab scipy image for YASMaPE"
+LABEL url="https://github.com/cdeck3r/YASMaPE"
+LABEL maintainer="cdeck3r"
+
+#
+# Install other tools
+#
+RUN pip3 install --upgrade pip setuptools wheel \
+    && pip3 install stockstats verifyml \
+    && pip3 install mlflow \
+    && pip3 install --no-cache-dir --force-reinstall -I pyyaml \
+    && pip3 install celery celery-amqp-backend snakemake
+

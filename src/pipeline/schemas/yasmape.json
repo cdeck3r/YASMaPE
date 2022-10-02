@@ -1,0 +1,10 @@
+{
+    "type" : "object",
+    "properties" : {
+        "symbol" : {"type" : "string"},
+        "data_dir" : {"type" : "string"},
+        "dryrun" : {"type" : "boolean"},
+        "delete_all_output" : {"type" : "boolean"}
+    },
+    "required": ["symbol", "data_dir"]
+}

@@ -1,0 +1,35 @@
+@startuml
+skinparam monochrome true
+skinparam componentStyle uml2
+skinparam linetype ortho
+
+
+participant "<<container>>\ndirector" as dir
+participant "<<celery queue>>\nrabbitmq" as q #00ff00
+participant "<<container>>\njupyter" as jup
+participant "<<storage>>\nfile system" as fs
+
+jup -> jup: start worker
+activate jup
+
+dir -> q: send_task(create_feature)
+activate dir
+q --> dir: success
+dir -> fs: write tid file
+deactivate dir
+jup -> q: consume
+q --> jup: task 'create_feature'
+
+create "<<snakemake>>\nworkflow" as workflow
+jup -> workflow: start workflow\n'create_feature'
+workflow -> workflow: create_feature
+activate workflow
+workflow -> fs: load csv file
+fs --> workflow: csv data
+workflow -> workflow: process data
+workflow -> fs: store results
+deactivate workflow
+workflow --> jup: done
+deactivate jup
+
+@enduml

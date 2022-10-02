@@ -1,0 +1,17 @@
+#
+# Configuration for download stock data workflow
+#
+# This config file exists to remark explicitly
+# the configuration of directories 
+#
+
+# Root of all data
+DATA_ROOT_DIR: "/YASMaPE/data"
+
+# celery send_task
+SEND_TASK: "/YASMaPE/src/celery_send_task/celery_send_task.py"
+TASK_SIGNATURE: "/YASMaPE/src/celery_send_task/task_create_feature_signature.json"
+QUEUE: "q_jupyter.create_feature"
+
+# Use at most N CPU cores/jobs in parallel.
+CORES: 1

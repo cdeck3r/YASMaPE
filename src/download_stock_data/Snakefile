@@ -1,0 +1,83 @@
+"""Run download stock data
+
+Example call:
+snakemake --cores all --config symbol="DBK.DE" period1="1630865082" period2="1662401082" 
+"""
+
+
+##############################
+# Configuration
+##############################
+
+# config anchor
+workdir: "/YASMaPE/src/download_stock_data"
+configfile: "config.yaml"
+
+# imports
+import sys
+import os
+import datetime
+from datetime import timezone, timedelta
+
+
+# TODAY,PASTDAY,DAYSBACK serves a sensible default value
+DAYSBACK = 100
+today = datetime.date.today()
+pastday = today - datetime.timedelta(DAYSBACK)
+pastday = datetime.datetime.fromordinal(pastday.toordinal())
+PASTDAY = int(pastday.replace(tzinfo=timezone.utc).timestamp())
+today = datetime.datetime.fromordinal(today.toordinal())
+TODAY = int(today.replace(tzinfo=timezone.utc).timestamp())
+
+# params from CLI
+PERIOD1 = str(config["period1"]) if "period1" in config is not None else PASTDAY
+PERIOD2 = str(config["period2"]) if "period2" in config is not None else TODAY
+SYMBOL = str(config["symbol"]) if "symbol" in config is not None else sys.exit("No stock symbol provided. Use --config symbol=...")   
+
+# paths to data directories from config.yaml
+DATA_ROOT_DIR = config["DATA_ROOT_DIR"]
+DATA_DIR = os.path.join(DATA_ROOT_DIR, SYMBOL)
+
+# celery send_task
+SEND_TASK = config["SEND_TASK"]
+TASK_SIGNATURE = config["TASK_SIGNATURE"]
+QUEUE = config["QUEUE"]
+
+##############################
+# Some helper functions
+##############################
+
+# nothing
+
+
+##############################
+# Rules start here
+##############################
+
+# a pseudo-rule that collects the target files
+rule all:
+    input:  
+        DATA_DIR + "/" + "stockdata.csv",
+        #DATA_DIR + "/" + "create_feature.tid"
+
+# 
+rule download_stock_data:
+    output:
+        DATA_DIR + "/" + "stockdata.csv",
+    params:
+        datadir=DATA_DIR,
+        urlendpoint="https://query1.finance.yahoo.com/v7/finance/download",
+        urlparams="interval=1d&events=history&includeAdjustedClose=true",
+    shell:
+        "mkdir -p {params.datadir} \
+        && chmod a+w {params.datadir} \
+        && curl -L -o {output} \"{params.urlendpoint}/{SYMBOL}?period1={PERIOD1}&period2={PERIOD2}&{params.urlparams}\""
+
+rule trigger_create_feature:
+    input:
+        DATA_DIR + "/" + "stockdata.csv",
+    output:
+        DATA_DIR + "/" + "create_feature.tid",
+    shell:
+        "python3 {SEND_TASK} -v --tidfile {output} {TASK_SIGNATURE} {QUEUE} input_dir {DATA_DIR}"
+        

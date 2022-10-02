@@ -1,0 +1,26 @@
+@startuml
+skinparam monochrome true
+skinparam componentStyle uml2
+skinparam linetype polyline
+'allow_mixing
+
+start
+:download stock data;
+:create_feature;
+  fork
+    :train_set.csv|
+  fork again
+    :eval_set.csv|
+  end fork
+
+:machine learning
+using Ludwig;
+
+:track experiment
+using mlflow;
+
+:create_modelcard;
+
+
+stop
+@enduml

@@ -1,0 +1,220 @@
+version: '3'
+
+services:
+  yasmape:
+    build: 
+      context: ./Dockerfiles
+      dockerfile: Dockerfile.yasmape
+    image: yasmape:latest
+    container_name: yasmape
+    hostname: yasmape
+    depends_on: 
+      - rabbitmq
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow-tracking:5000/
+      - BROKER_URL=pyamqp://rabbitmq:rabbitmq@rabbitmq:5672//
+      - RESULT_BACKEND=celery_amqp_backend.AMQPBackend://
+    volumes:
+      - repo:/YASMaPERepo
+      - data:${APP_ROOT}/data
+      - log:${APP_ROOT}/log
+      - src:${APP_ROOT}/src
+      - scripts:${APP_ROOT}/scripts
+      - docs:${APP_ROOT}/docs      
+    privileged: ${DEVSYS_PRIV:-false}
+    stdin_open: true
+    tty: true
+  jupyter:
+    build: 
+      context: ./Dockerfiles
+      dockerfile: Dockerfile.jupyter
+    image: jupyter:latest
+    container_name: jupyter
+    hostname: jupyter
+    depends_on: 
+      - rabbitmq
+    ports: # HOST:CONTAINER
+      - "8888:8888"
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - GRANT_SUDO=yes
+      - MLFLOW_TRACKING_URI=http://mlflow-tracking:5000/
+      - BROKER_URL=pyamqp://rabbitmq:rabbitmq@rabbitmq:5672//
+      - RESULT_BACKEND=celery_amqp_backend.AMQPBackend://
+    volumes:
+      - repo:/YASMaPERepo
+      - data:${APP_ROOT}/data
+      - notebooks:/home/jovyan/work
+      - log:${APP_ROOT}/log
+      - src:${APP_ROOT}/src
+      - scripts:${APP_ROOT}/scripts
+    command: ["start.sh", "jupyter", "lab", "--LabApp.token=''"]
+    stdin_open: true
+    tty: true
+  ludwig:
+    build: 
+      context: ./Dockerfiles
+      dockerfile: Dockerfile.ludwig
+    image: ludwig:latest
+    container_name: ludwig
+    hostname: ludwig
+    depends_on: 
+      - mlflow
+      - rabbitmq
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow-tracking:5000/
+      - BROKER_URL=pyamqp://rabbitmq:rabbitmq@rabbitmq:5672//
+      - RESULT_BACKEND=celery_amqp_backend.AMQPBackend://
+    ports: # HOST:CONTAINER
+      - "6006:6006"
+    volumes:
+      - repo:/YASMaPERepo
+      - data:${APP_ROOT}/data
+      - log:${APP_ROOT}/log
+      - src:${APP_ROOT}/src
+      - scripts:${APP_ROOT}/scripts
+      - ludwig:${APP_ROOT}/ludwig
+      - mlflowartifact:${APP_ROOT}/mlflow-artifact-store      
+    entrypoint: /bin/bash
+    working_dir: ${APP_ROOT}/ludwig
+    stdin_open: true
+    tty: true
+  mlflow:
+    build: 
+      context: ./Dockerfiles
+      dockerfile: Dockerfile.mlflow
+    container_name: mlflow
+    image: mlflow:latest
+    ports: # HOST:CONTAINER
+      - "5000:5000"
+    volumes:
+      - mlflowstore:${APP_ROOT}/mlflow-tracking-store
+      - mlflowartifact:${APP_ROOT}/mlflow-artifact-store
+    command: ["mlflow", "server", "--backend-store-uri", "sqlite://${APP_ROOT}/mlflow-tracking-store/mlflow_tracking.db", "--default-artifact-root", "${APP_ROOT}/mlflow-artifact-store", "--host", "0.0.0.0"]
+  director:
+    build: 
+      context: ./Dockerfiles
+      dockerfile: Dockerfile.director
+    image: director:latest
+    container_name: director
+    hostname: director
+    depends_on: 
+      - rabbitmq
+      - flower
+    environment:
+        - DIRECTOR_DATABASE_URI=sqlite:///${APP_ROOT}/director/database.db
+        - DIRECTOR_HOME=${APP_ROOT}/src/pipeline
+        - DIRECTOR_BROKER_URI=amqp://rabbitmq:rabbitmq@rabbitmq:5672//
+        - DIRECTOR_RESULT_BACKEND_URI=celery_amqp_backend.AMQPBackend://
+    ports: # HOST:CONTAINER
+      - "8000:8000"
+    volumes:
+      - repo:/YASMaPERepo
+      - data:${APP_ROOT}/data
+      - log:${APP_ROOT}/log
+      - src:${APP_ROOT}/src
+      - director:${APP_ROOT}/director
+      - scripts:${APP_ROOT}/scripts
+    command: /bin/bash -c "
+        director db upgrade
+        && director celery worker --hostname worker@%n --loglevel INFO --logfile ${APP_ROOT}/log/director.log -E --detach 
+        && director webserver -b 0.0.0.0:8000
+        "
+    stdin_open: true
+    tty: true
+    
+########################## 
+# rabbitmq stuff
+##########################
+  # broker backend for Celery
+  rabbitmq:
+    container_name: rabbitmq
+    image: "rabbitmq:3-management"
+    hostname: rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=rabbitmq
+      - RABBITMQ_DEFAULT_PASS=rabbitmq
+      - RABBITMQ_DEFAULT_VHOST=/
+    ports: # HOST:CONTAINER
+      - "15672:15672"
+      - "5672:5672"
+  # management GUI for Celery
+  flower:
+    container_name: flower
+    image: mher/flower
+    depends_on:
+      - rabbitmq
+    command: ["celery", "--broker=pyamqp://rabbitmq:rabbitmq@rabbitmq:5672//", "flower"]
+    ports:
+      - "5555:5555"
+
+#
+# Volume definition
+# 
+volumes:
+  repo:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${VOL_DIR}/
+      o: bind
+  log:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${VOL_DIR}/log
+      o: bind
+  notebooks:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${VOL_DIR}/notebooks
+      o: bind
+  src:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${VOL_DIR}/src
+      o: bind
+  scripts:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${VOL_DIR}/scripts
+      o: bind
+  docs:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${VOL_DIR}/docs
+      o: bind
+  data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${VOL_DIR}/data
+      o: bind
+  ludwig:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${VOL_DIR}/ludwig
+      o: bind
+  director:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${VOL_DIR}/director
+      o: bind
+  mlflowstore:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${VOL_DIR}/mlflow-tracking-store
+      o: bind
+  mlflowartifact:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${VOL_DIR}/mlflow-artifact-store
+      o: bind      

@@ -1,0 +1,33 @@
+@startuml
+skinparam monochrome true
+skinparam componentStyle uml2
+skinparam linetype ortho
+
+interface REST
+component yasmape <<container>>
+component ludwig <<container>>
+component jupyter <<container>>
+component mlflow <<container>>
+component "file system" as fs
+
+ludwig -left- fs
+yasmape -down- fs
+jupyter - fs
+
+ludwig -(REST
+REST -down- mlflow
+mlflow -up- fs
+
+
+queue "q_yasmape.*" <<celery>> as qyas 
+yasmape "1..* " .up.^ qyas
+
+queue "q_jupyter.*" <<celery>> as qjupy 
+jupyter "1..* " .up.^  qjupy
+
+
+queue "q_ludwig.*" <<celery>> as qlud
+ludwig "1..* " .up.^ qlud
+
+
+@enduml

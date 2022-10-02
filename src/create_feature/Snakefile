@@ -1,0 +1,53 @@
+"""Run feature extract
+
+Example call:
+snakemake --cores all --config input_dir="/YASMaPE/data/DBK.DE"
+"""
+
+##############################
+# Configuration
+##############################
+
+# config anchor
+workdir: "/YASMaPE/src/create_feature"
+configfile: "config.yaml"
+
+# imports
+import sys
+
+# paths to image directories from config.yaml
+DATA_ROOT_DIR = config["DATA_ROOT_DIR"]
+
+# params from CLI
+INPUT_DIR = str(config["input_dir"]) if "input_dir" in config is not None else sys.exit("No input dir provided. Use --config input_dir=...")   
+
+
+##############################
+# Some helper functions
+##############################
+
+# nothing
+
+
+##############################
+# Rules start here
+##############################
+
+# a pseudo-rule that collects the target files
+rule all:
+    input:  INPUT_DIR + "/" + "notebook.ipynb",
+            INPUT_DIR + "/" + "train_set.csv",
+            INPUT_DIR + "/" + "eval_set.csv",
+
+# runs python notebook to create features from stock data csv file
+rule create_feature:
+    input:
+        INPUT_DIR + "/" + "stockdata.csv",
+    output:
+        INPUT_DIR + "/" + "notebook.ipynb",
+        INPUT_DIR + "/" + "train_set.csv",
+        INPUT_DIR + "/" + "eval_set.csv",
+    params:
+        jpynb="/home/jovyan/work/create_feature.ipynb"
+    shell:
+        "cd {INPUT_DIR} && cat {params.jpynb} | jupyter nbconvert --to notebook --execute --stdin --clear-output"
