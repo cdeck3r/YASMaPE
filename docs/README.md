@@ -20,11 +20,11 @@ YASMaPE experiments investigate a regression and a classification problem. Both 
 
 **Regression problem:** Given the input feature vector, what is the predicted return?
 
-![Return regression problem](regression_problem.png)
+<img src="regression_problem.png" width="50%" alt="Return regression problem">
 
 **Binary classification problem:** Given the input feature vector, is the predicted return larger than a given value?
 
-![Return binary classification problem](classification_problem.png)
+<img src="classification_problem.png"> width="50%" alt="Return binary classification problem">
 
 ## Results
 
