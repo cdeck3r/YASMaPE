@@ -8,10 +8,10 @@
 .snakemake
 
 data/*
-data/!gitkeep
+!data/.gitkeep
 
 director/*
-director/!gitkeep
+!director/.gitkeep
 
 ludwig/results/*
 
