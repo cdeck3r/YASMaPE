@@ -24,7 +24,7 @@ YASMaPE experiments investigate a regression and a classification problem. Both 
 
 **Binary classification problem:** Given the input feature vector, is the predicted return larger than a given value?
 
-<img src="classification_problem.png"> width="50%" alt="Return binary classification problem">
+<img src="classification_problem.png" width="50%" alt="Return binary classification problem">
 
 ## Results
 
