@@ -2,7 +2,17 @@
 
 This page collects all documentation ressource for YASMaPE.
 
-_tbd. insert toc_
+* [YASMaPE Problem Formulation](#yasmape-problem-formulation)
+* [Results](#results)
+* [Feature Engineering](#feature-engineering)
+* [Machine Learning (ML) Pipeline](#machine-learning-ml-pipeline)
+  * [Coordination across Containers](#coordination-across-containers)
+  * [Orchestration](#orchestration)
+* [ludwig](#ludwig)
+* [mflow](#mflow)
+* [Modelcards](#modelcards)
+* [Gist](#gist)
+
 
 ## YASMaPE Problem Formulation
 
@@ -29,13 +39,13 @@ _windowing, etc._
 
 The pipeline's stages is shown as an activity diagram in the next figure.
 
-_TODO insert image ![ac_pipeline.uml]()_
+![Activity diagram of YASMaPE pipeline](http://www.plantuml.com/plantuml/png/5Smj3a8n301WpodW0gl0eHu2IKA2Gf7IDRo6hLlw4wuFJttkMppG8dlR7KIfPUNz6Z7z163uBM-9DL_fR3GqMAFGw42LwNCqU9plLxnTeACer44EICyfavieborTMElV7m00)
 
 The software parts run independently in docker containers. They share their data via the filesystem. For coordination among the containers, they setup tasks queues using [celery](https://docs.celeryq.dev/en/stable/) as a distributed task queuing system. A [snakemake](https://snakemake.readthedocs.io/en/stable/) installation within each container executes the tasks consumed from the queue. Tasks become idempotent with snakemake.
 
 The following UML component diagram shows the project's ML pipeline. 
 
-_TODO insert image ![cp_pipeline.uml]()_
+![Component diagram YASMaPE pipeline](http://www.plantuml.com/plantuml/png/1S6n3eGW303GNxdx0JhSTfk3euc9avF1qaWZb0RQ-Fk-zsN1uea-sKp77w379rnisKyVrB69aLZ0LW4JuVthi4_R4jSPQcI1r700wg6iL5WeU2ql)
 
 YASMaPE runs lots of experiments. We use [mlflow](https://mlflow.org/) for ML lifecycle management and experiment tracking.
 
@@ -47,7 +57,7 @@ A celery worker encapsulates a snakemake workflow. `send_task` submits a task si
 
 The following figure depicts the coordination behavior for the pipeline's `create_feature` stage.
 
-_TODO insert image ![seq_coordination.uml]()_
+![Sequence diagram of YASMaPE coordination](http://www.plantuml.com/plantuml/png/1S4x3a912030g-W5biBEpiBInCJAoY0G7t4Nb4-ylZDxDPhDijkgFda42FoDbzRMpqu9SYkn6kGBY8NUXu3xwNR1wnaMgW4x9QHy7-GUh8QbRgFN_0C0)
 
 With snakemake come interesting features for running workflows asynchronously across containers:
 
