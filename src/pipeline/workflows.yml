@@ -5,10 +5,25 @@ yasmape.PIPELINE:
     - download_stock_data
     - create_feature
     - ludwig_preprocess
-    - ludwig_train
+    - ludwig_experiment
+    - create_modelcard
+  schema: yasmape
+
+yasmape.EVAL:
+  tasks:
     - ludwig_evaluate
     - create_modelcard
   schema: yasmape
+
+yasmape.PREDICT:
+  tasks:
+    - download_stock_data
+    - create_feature
+    - ludwig_preprocess
+    - ludwig_predict
+    - create_modelcard
+  schema: yasmape
+
 
 # Simple ETL example
 #

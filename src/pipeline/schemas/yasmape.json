@@ -3,8 +3,10 @@
     "properties" : {
         "symbol" : {"type" : "string"},
         "data_dir" : {"type" : "string"},
+        "run" : {"type" : "string"},
+        "train_rule_active" : {"type" : "boolean"},
         "dryrun" : {"type" : "boolean"},
         "delete_all_output" : {"type" : "boolean"}
     },
-    "required": ["symbol", "data_dir"]
+    "required": ["symbol"]
 }

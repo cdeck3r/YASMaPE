@@ -19,7 +19,10 @@ import sys
 DATA_ROOT_DIR = config["DATA_ROOT_DIR"]
 
 # params from CLI
-INPUT_DIR = str(config["input_dir"]) if "input_dir" in config is not None else sys.exit("No input dir provided. Use --config input_dir=...")   
+SYMBOL = str(config["symbol"]) if "symbol" in config is not None else sys.exit("No symbol provided. Use --config symbol=...")
+
+# Directories
+INPUT_DIR = os.path.join(DATA_ROOT_DIR, SYMBOL)
 
 
 ##############################

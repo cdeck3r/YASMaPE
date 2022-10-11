@@ -1,0 +1,337 @@
+"""Run ludwig
+
+Example call:
+snakemake --cores all --config symbol="MUX.DE" yaml="regression_return.yaml" -R experiment
+
+Params:
+    symbol: the stock symbol
+    yaml: the name of yaml config file for ludwig
+    run: (optional) run number, default: latest num in result directory 
+    train_rule_active: (optional) set train rule active for downstream jobs, default: False
+
+The yaml file follows convention {experiment_name}_{model_name}.yaml
+
+Other examples:
+
+```
+snakemake --cores all --config symbol="MUX.DE" yaml="regression_return.yaml" -R experiment
+```
+- Will run a *new* experiment (train + evaluate) and store results in regression_return_{n+1}
+
+```
+snakemake --cores all --config symbol="MUX.DE" yaml="regression_return.yaml" train_rule_active="True"
+```
+- Will run a *new* training and store results in regression_return_{n+1}
+- If you run the "evaluate" afterwards omitting train_rule_active param it will evaluate the test dataset againt the latest model, that is contained regression_return_{n+1}
+
+```
+snakemake --cores all --config symbol="MUX.DE" yaml="regression_return.yaml" -R predict
+```
+- Will run the predict rule on the lastest result
+
+```
+snakemake --cores all --config symbol="MUX.DE" yaml="regression_return.yaml" run="3" -R predict
+```
+- Will run the predict rule on the "regression_return_3" result
+
+"""
+
+##############################
+# imports
+##############################
+
+import sys
+import os
+import pathlib
+import re
+import requests
+
+
+##############################
+# Configuration
+##############################
+
+# config anchor
+workdir: "/YASMaPE/src/ludwig"
+configfile: "config.yaml"
+
+# paths to image directories from config.yaml
+DATA_ROOT_DIR = config["DATA_ROOT_DIR"]
+
+# params from CLI
+SYMBOL = str(config["symbol"]) if "symbol" in config is not None else sys.exit("No symbol provided. Use --config symbol=...")
+YAML = str(config["yaml"]) if "yaml" in config is not None else sys.exit("No yaml config provided. Use --config yaml=...")
+RUN = str(config["run"]) if "run" in config is not None else ""
+TRAIN_RULE_ACTIVE = bool(config["train_rule_active"]) if "train_rule_active" in config is not None else False
+
+# Directories
+INPUT_DIR = os.path.join(DATA_ROOT_DIR, SYMBOL)
+LUDWIG_DIR = os.path.join(INPUT_DIR, "ludwig")
+LUDWIG_PREPROC_DIR = os.path.join(LUDWIG_DIR, "preprocess")
+LUDWIG_YAML_FILE = os.path.join(LUDWIG_DIR, YAML)
+
+# Files
+TRAIN_CSV = "train_set.csv"
+EVAL_CSV = "eval_set.csv"
+PREPROC_TRAIN_SET = [ "train_set.training.hdf5", "train_set.meta.json" ]
+PREPROC_EVAL_SET = [ "eval_set.test.hdf5" ]
+
+# Names
+# yaml file follows convention {experiment_name}_{model_name}.yaml
+EXPERIMENT_NAME = re.search(r"(.+)_(.+)", YAML).group(1)
+MODEL_NAME = re.search(r"(.+)_(.+).yaml$", YAML).group(2)
+
+# Experiment dir
+EXPERIMENT_OUTDIR = os.path.join(LUDWIG_DIR, EXPERIMENT_NAME)
+
+##############################
+# Some helper functions
+##############################
+
+def last_run_result():
+    """Retrieve last run result directory
+
+    One of ...
+    {EXPERIMENT_NAME}_{MODEL_NAME}
+    {EXPERIMENT_NAME}_{MODEL_NAME}_0
+    {EXPERIMENT_NAME}_{MODEL_NAME}_1
+    ...
+    """
+    try:
+        #results_dirs = next(os.walk(EXPERIMENT_OUTDIR))[1]
+        results_dirs = [d for d in pathlib.Path(EXPERIMENT_OUTDIR).iterdir() if d.is_dir()]
+        results_dirs = sorted(results_dirs, key=os.path.getmtime)
+    except Exception:
+        results_dirs = []
+    if not results_dirs:
+        return ''
+    
+    return os.path.basename(results_dirs[-1])
+    
+def current_run_result(lrr=None):
+    """Retrieve current run result directory
+
+    If last run result is {EXPERIMENT_NAME}_{MODEL_NAME}_n,
+    the current run result dir is {EXPERIMENT_NAME}_{MODEL_NAME}_n+1
+    
+    Special cases:
+    1. If last run result does not exist,
+        the current run result dir is {EXPERIMENT_NAME}_{MODEL_NAME}
+    2. If last run result is {EXPERIMENT_NAME}_{MODEL_NAME},
+        the current run result dir is {EXPERIMENT_NAME}_{MODEL_NAME}_0
+    
+    """
+
+    if not lrr:
+        subdir = EXPERIMENT_NAME + "_" + MODEL_NAME
+    else:
+        x = re.search(r"\d+$", lrr)
+        num = -1 if x is None else int(x.group())
+        next_num = num + 1
+        subdir = EXPERIMENT_NAME + "_" + MODEL_NAME + "_" + str(next_num)
+
+    return os.path.join(EXPERIMENT_OUTDIR, subdir)
+
+def url_avail(url):
+    try:
+        re = requests.head(url, timeout=2)
+        return r.status_code == 200
+    except Exception:
+        pass
+
+    return False
+
+
+def predict_csv_files(result_dir, sub_str='_predictions.csv'):
+    """Return predictions csv files from result_dir with full path
+    
+    """
+    predict_csv = [f for f in next(os.walk(result_dir))[2] if sub_str in f]
+    return [os.path.join(result_dir, f) for f in predict_csv]
+
+##############################
+# Other dir definitions
+##############################
+# because we now have the required information
+
+# check for MLFLOW tracking server
+MLFLOW_AVAIL = url_avail(url=os.getenv('MLFLOW_TRACKING_URI'))
+
+# Result dirs
+lrr = last_run_result()
+LAST_RUN_RESULT = os.path.join(EXPERIMENT_OUTDIR, lrr)
+CURRENT_RUN_RESULT = os.path.join(EXPERIMENT_OUTDIR, current_run_result(lrr))
+
+# Compile model path 
+# if RUN provided, use {EXPERIMENT_NAME}_{MODEL_NAME}_RUN
+# else use output of last_run_result() and handle special cases
+if not RUN:
+    RUN_RESULT = lrr 
+    if not RUN_RESULT:
+        RUN_RESULT = os.path.join(EXPERIMENT_NAME + "_" + MODEL_NAME)
+else:
+    RUN_RESULT = os.path.join(EXPERIMENT_NAME + "_" + MODEL_NAME + "_" + RUN)
+
+MODEL_PATH = os.path.join(EXPERIMENT_OUTDIR, RUN_RESULT, "model")
+TEST_OUTDIR = os.path.join(EXPERIMENT_OUTDIR, RUN_RESULT)
+RUN_RESULT_DIR = PREDICT_OUTDIR = TEST_OUTDIR
+
+##############################
+# End of Configuration
+##############################
+
+
+##############################
+# Rules start here
+##############################
+
+# a pseudo-rule that collects the target files
+#rule all:
+#    input: directory(LUDWIG_PREPROC_DIR)
+#        [os.path.join(LUDWIG_PREPROC_DIR, f) for f in PREPROC_TRAIN_SET],
+#        [os.path.join(LUDWIG_PREPROC_DIR, f) for f in PREPROC_EVAL_SET]
+
+
+##############################
+# Preprocessing
+##############################
+
+# runs ludwig preprocess on csv file
+rule preprocess:
+    input:
+        train = os.path.join(INPUT_DIR, TRAIN_CSV),
+        eval = os.path.join(INPUT_DIR, EVAL_CSV),
+    output: 
+        # preprocessing output
+        [os.path.join(INPUT_DIR, f) for f in PREPROC_TRAIN_SET],
+        [os.path.join(INPUT_DIR, f) for f in PREPROC_EVAL_SET],
+    shell:
+        "cd {INPUT_DIR} && ludwig preprocess --training_set {input.train} --test_set {input.eval} -pc {LUDWIG_YAML_FILE}"
+
+
+rule mv_preprocessed_file:
+    input:
+        # preprocessing output
+        [os.path.join(INPUT_DIR, f) for f in PREPROC_TRAIN_SET],
+        [os.path.join(INPUT_DIR, f) for f in PREPROC_EVAL_SET],         
+    output:
+        directory(LUDWIG_PREPROC_DIR),         
+    shell:
+        "mkdir -p {LUDWIG_PREPROC_DIR} && mv -t {LUDWIG_PREPROC_DIR} {input}"
+        
+##############################
+# Training
+##############################
+
+# example call
+# ludwig train --training_set .hdf5 --training_set_metadata .json 
+# --output_directory regression --experiment_name regression 
+# --model_name return --config xyz.yaml -ssl --mlflow
+
+##
+## Attn: this can be configured to be idempotent
+##
+## Set TRAIN_RULE_ACTIVE=False (default) to be for downstream rules idempotent
+## typical downstream rules:
+## * evaluate
+## * predict
+##
+## Train a new model by explicitly run 'experiment' rule or set TRAIN_RULE_ACTIVE=True
+## This would re-run upstream rules, if necessary.
+##
+## Note: keep default_target for this rule
+##
+rule train:
+    default_target: True
+    input:
+        train_set = os.path.join(LUDWIG_PREPROC_DIR, PREPROC_TRAIN_SET[0]),
+        train_meta = os.path.join(LUDWIG_PREPROC_DIR, PREPROC_TRAIN_SET[1]),
+        config = LUDWIG_YAML_FILE,
+    output:
+        directory(CURRENT_RUN_RESULT) if TRAIN_RULE_ACTIVE else touch(os.path.join(RUN_RESULT_DIR, "training_statistics.json"))
+    params:
+        mlflow="--mlflow" if MLFLOW_AVAIL else "",
+        ssl="--skip_save_log",
+    shell:
+        "test {TRAIN_RULE_ACTIVE} == 'True' && ( cd {LUDWIG_DIR} && ludwig train --training_set {input.train_set} --training_set_metadata {input.train_meta} --output_directory {EXPERIMENT_OUTDIR} --experiment_name {EXPERIMENT_NAME} --model_name {MODEL_NAME} --config {input.config} {params.ssl} {params.mlflow} ); exit 0"
+
+##############################
+# Experiment
+##############################
+
+# example call
+# ludwig experiment --training_set .hdf5 --training_set_metadata .json --test_set .hdf5
+# --output_directory regression --experiment_name regression 
+# --model_name return --config xyz.yaml {params} --mlflow
+
+## Attn: this is not idempotent ##
+rule experiment:
+    input:
+        train_set = os.path.join(LUDWIG_PREPROC_DIR, PREPROC_TRAIN_SET[0]),
+        train_meta = os.path.join(LUDWIG_PREPROC_DIR, PREPROC_TRAIN_SET[1]),
+        eval_set = os.path.join(LUDWIG_PREPROC_DIR, PREPROC_EVAL_SET[0]),        
+        config = LUDWIG_YAML_FILE,
+    output: 
+        directory(CURRENT_RUN_RESULT)
+    params:
+        mlflow="--mlflow" if MLFLOW_AVAIL else "",
+        ssl="--skip_save_log",
+        ssuo="--skip_save_unprocessed_output",        
+        sstp="--skip_save_predictions",
+    shell:
+        "cd {LUDWIG_DIR} && ludwig experiment --training_set {input.train_set} --training_set_metadata {input.train_meta} --test_set {input.eval_set} --output_directory {EXPERIMENT_OUTDIR} --experiment_name {EXPERIMENT_NAME} --model_name {MODEL_NAME} --config {input.config} {params.ssl} {params.ssuo} {params.sstp} {params.mlflow}"
+
+
+##############################
+# Evaluate
+##############################
+
+# example call
+# ludwig evaluate --dataset .hdf5 --output_directory regression_return_num 
+# --model_path regression_return_num/model -scp --mlflow
+
+rule evaluate:
+    input:
+        eval_set = os.path.join(LUDWIG_PREPROC_DIR, PREPROC_EVAL_SET[0]),
+        model_path = MODEL_PATH,
+    output: 
+        # eval stats file
+        os.path.join(TEST_OUTDIR, "test_statistics.json")
+    params:
+        mlflow="--mlflow" if MLFLOW_AVAIL else "",
+        scp="--skip_collect_predictions"
+    shell:
+        "cd {LUDWIG_DIR} && ludwig evaluate --dataset {input.eval_set} --output_directory {TEST_OUTDIR} --model_path {input.model_path} {params.scp} {params.mlflow}"
+
+
+##############################
+# Predict
+##############################
+
+# example call
+# ludwig predict --dataset .hdf5 --output_directory regression_return_num 
+# --model_path regression_return_num/model 
+
+rule predict:
+    input:
+        eval_set = os.path.join(LUDWIG_PREPROC_DIR, PREPROC_EVAL_SET[0]),
+        model_path = MODEL_PATH,
+    output: 
+        # prediction files
+        os.path.join(PREDICT_OUTDIR, "predictions.parquet"),
+        os.path.join(PREDICT_OUTDIR, "predictions.shapes.json"),
+        predict_csv_files(PREDICT_OUTDIR),
+    params:
+        mlflow="--mlflow" if MLFLOW_AVAIL else "",
+        ssuo="--skip_save_unprocessed_output",
+        sstp="--skip_save_predictions",
+        predict_csv = predict_csv_files(PREDICT_OUTDIR),
+    shell:
+        "cd {LUDWIG_DIR} && ludwig predict --dataset {input.eval_set} --output_directory {PREDICT_OUTDIR} --model_path {input.model_path} {params.ssuo} {params.mlflow}"
+
+rule predict_cleanup_csv:
+    input:
+        predict_csv_files(PREDICT_OUTDIR),
+    shell:
+        "rm -rf {input}"
+        

@@ -1,0 +1,12 @@
+#
+# Configuration for ludwig workflow
+#
+# This config file exists to remark explicitly
+# the configuration of directories 
+#
+
+# Root of all data
+DATA_ROOT_DIR: "/YASMaPE/data"
+
+# Use at most N CPU cores/jobs in parallel.
+CORES: 1

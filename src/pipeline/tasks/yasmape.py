@@ -43,7 +43,7 @@ def compile_task_signature(task_name, queue, **kwargs):
     sig = json.dumps(dict(s))    
     # Due to json schema, the following kwargs are guaranteed:
     # - symbol
-    # - data_dir
+    # - yaml
     extra_args = kwargs['payload']
     
     # compile task signature config
@@ -65,7 +65,7 @@ def download_stock_data(*args, **kwargs):
     task_sig = compile_task_signature(task_name, queue, **kwargs)
 
     symbol = kwargs['payload']['symbol']
-    data_dir = kwargs['payload']['data_dir']
+    data_dir = '/YASMaPE/data' # default data_dir
     tid_filepath = os.path.join(data_dir, symbol, task_name+'.tid')
     
     # send_task to queue
@@ -83,16 +83,37 @@ def create_feature(*args, **kwargs):
 
 @task(name="ludwig_preprocess")
 def ludwig_preprocess(*args, **kwargs):
+    symbol = kwargs['payload']['symbol']
+    yaml = kwargs['payload']['yaml']
     pass
 
 @task(name="ludwig_train")
 def ludwig_train(*args, **kwargs):
+    symbol = kwargs['payload']['symbol']
+    yaml = kwargs['payload']['yaml']
+
+    pass
+
+@task(name="ludwig_experiment")
+def ludwig_experiment(*args, **kwargs):
+    symbol = kwargs['payload']['symbol']
+    yaml = kwargs['payload']['yaml']
     pass
 
 @task(name="ludwig_evaluate")
 def ludwig_evaluate(*args, **kwargs):
+    symbol = kwargs['payload']['symbol']
+    yaml = kwargs['payload']['yaml']
+    pass
+
+@task(name="ludwig_predict")
+def ludwig_predict(*args, **kwargs):
+    symbol = kwargs['payload']['symbol']
+    yaml = kwargs['payload']['yaml']
     pass
 
 @task(name="create_modelcard")
 def create_modelcard(*args, **kwargs):
+    symbol = kwargs['payload']['symbol']
+    yaml = kwargs['payload']['yaml']
     pass

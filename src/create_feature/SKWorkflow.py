@@ -9,7 +9,7 @@ class SKWorkflow:
 
         This workflow understands the config parameter input_dir.
         A caller has to provide the parameter as key/value
-        pair in cfg_params, e.g {"input_dir": "/YASMaPE/data/..."}
+        pair in cfg_params, e.g {"symbol": "MUX.DE"}
         
         Furthermore, the tasks supports switches such as
             * delete_all_output
@@ -29,8 +29,8 @@ class SKWorkflow:
         self.sk_config = self._get_workflow_config_yaml()
         
         # retrieve key/values from caller
-        if 'input_dir' in cfg_params is not None:
-            self.sk_config['input_dir'] = str(cfg_params['input_dir'])
+        if 'symbol' in cfg_params is not None:
+            self.sk_config['symbol'] = str(cfg_params['symbol'])
         # We accept other params
         # 1. delete_all_output - resets workflow
         # 2. dryrun - test the workflow
