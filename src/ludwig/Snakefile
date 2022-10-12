@@ -77,8 +77,8 @@ LUDWIG_PREPROC_DIR = os.path.join(LUDWIG_DIR, "preprocess")
 LUDWIG_YAML_FILE = os.path.join(LUDWIG_DIR, YAML)
 
 # Files
-TRAIN_CSV = "train_set.csv"
-EVAL_CSV = "eval_set.csv"
+TRAIN_DATASET = "train_set.parquet"
+EVAL_DATASET = "eval_set.parquet"
 PREPROC_TRAIN_SET = [ "train_set.training.hdf5", "train_set.meta.json" ]
 PREPROC_EVAL_SET = [ "eval_set.test.hdf5" ]
 
@@ -137,11 +137,11 @@ MLFLOW_AVAIL = url_avail(url=os.getenv('MLFLOW_TRACKING_URI'))
 # Preprocessing
 ##############################
 
-# runs ludwig preprocess on csv file
+# runs ludwig preprocess on parquet file
 rule preprocess:
     input:
-        train = os.path.join(INPUT_DIR, TRAIN_CSV),
-        eval = os.path.join(INPUT_DIR, EVAL_CSV),
+        train = os.path.join(INPUT_DIR, TRAIN_DATASET),
+        eval = os.path.join(INPUT_DIR, EVAL_DATASET),
     output: 
         # preprocessing output
         [os.path.join(INPUT_DIR, f) for f in PREPROC_TRAIN_SET],
@@ -152,11 +152,10 @@ rule preprocess:
 
 rule mv_preprocessed_file:
     input:
-        # preprocessing output
-        [os.path.join(INPUT_DIR, f) for f in PREPROC_TRAIN_SET],
-        [os.path.join(INPUT_DIR, f) for f in PREPROC_EVAL_SET],         
+        # wire the preprocessing output to this rule's input
+        rules.preprocess.output
     output:
-        directory(LUDWIG_PREPROC_DIR),         
+        [os.path.join(LUDWIG_PREPROC_DIR, os.path.basename(f)) for f in rules.preprocess.output]
     shell:
         "mkdir -p {LUDWIG_PREPROC_DIR} && mv -t {LUDWIG_PREPROC_DIR} {input}"
         

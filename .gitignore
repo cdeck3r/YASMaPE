@@ -4,6 +4,7 @@
 *.csv
 .lock_preprocessing
 *.hdf5
+*.parquet
 
 .snakemake
 

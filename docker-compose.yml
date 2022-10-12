@@ -11,7 +11,7 @@ services:
     depends_on: 
       - rabbitmq
     environment:
-      - MLFLOW_TRACKING_URI=http://mlflow-tracking:5000/
+      - MLFLOW_TRACKING_URI=http://mlflow:5000/
       - BROKER_URL=pyamqp://rabbitmq:rabbitmq@rabbitmq:5672//
       - RESULT_BACKEND=celery_amqp_backend.AMQPBackend://
     volumes:
@@ -38,7 +38,7 @@ services:
     environment:
       - JUPYTER_ENABLE_LAB=yes
       - GRANT_SUDO=yes
-      - MLFLOW_TRACKING_URI=http://mlflow-tracking:5000/
+      - MLFLOW_TRACKING_URI=http://mlflow:5000/
       - BROKER_URL=pyamqp://rabbitmq:rabbitmq@rabbitmq:5672//
       - RESULT_BACKEND=celery_amqp_backend.AMQPBackend://
     volumes:
@@ -62,7 +62,7 @@ services:
       - mlflow
       - rabbitmq
     environment:
-      - MLFLOW_TRACKING_URI=http://mlflow-tracking:5000/
+      - MLFLOW_TRACKING_URI=http://mlflow:5000/
       - BROKER_URL=pyamqp://rabbitmq:rabbitmq@rabbitmq:5672//
       - RESULT_BACKEND=celery_amqp_backend.AMQPBackend://
     ports: # HOST:CONTAINER
