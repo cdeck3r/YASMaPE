@@ -46,6 +46,12 @@ import pathlib
 import re
 import requests
 
+# Some specific helper functions
+
+from util import predict_csv_files
+from util import url_avail
+from util import last_run_result
+from util import current_run_result
 
 ##############################
 # Configuration
@@ -84,83 +90,10 @@ MODEL_NAME = re.search(r"(.+)_(.+).yaml$", YAML).group(2)
 # Experiment dir
 EXPERIMENT_OUTDIR = os.path.join(LUDWIG_DIR, EXPERIMENT_NAME)
 
-##############################
-# Some helper functions
-##############################
-
-def last_run_result():
-    """Retrieve last run result directory
-
-    One of ...
-    {EXPERIMENT_NAME}_{MODEL_NAME}
-    {EXPERIMENT_NAME}_{MODEL_NAME}_0
-    {EXPERIMENT_NAME}_{MODEL_NAME}_1
-    ...
-    """
-    try:
-        #results_dirs = next(os.walk(EXPERIMENT_OUTDIR))[1]
-        results_dirs = [d for d in pathlib.Path(EXPERIMENT_OUTDIR).iterdir() if d.is_dir()]
-        results_dirs = sorted(results_dirs, key=os.path.getmtime)
-    except Exception:
-        results_dirs = []
-    if not results_dirs:
-        return ''
-    
-    return os.path.basename(results_dirs[-1])
-    
-def current_run_result(lrr=None):
-    """Retrieve current run result directory
-
-    If last run result is {EXPERIMENT_NAME}_{MODEL_NAME}_n,
-    the current run result dir is {EXPERIMENT_NAME}_{MODEL_NAME}_n+1
-    
-    Special cases:
-    1. If last run result does not exist,
-        the current run result dir is {EXPERIMENT_NAME}_{MODEL_NAME}
-    2. If last run result is {EXPERIMENT_NAME}_{MODEL_NAME},
-        the current run result dir is {EXPERIMENT_NAME}_{MODEL_NAME}_0
-    
-    """
-
-    if not lrr:
-        subdir = EXPERIMENT_NAME + "_" + MODEL_NAME
-    else:
-        x = re.search(r"\d+$", lrr)
-        num = -1 if x is None else int(x.group())
-        next_num = num + 1
-        subdir = EXPERIMENT_NAME + "_" + MODEL_NAME + "_" + str(next_num)
-
-    return os.path.join(EXPERIMENT_OUTDIR, subdir)
-
-def url_avail(url):
-    try:
-        re = requests.head(url, timeout=2)
-        return r.status_code == 200
-    except Exception:
-        pass
-
-    return False
-
-
-def predict_csv_files(result_dir, sub_str='_predictions.csv'):
-    """Return predictions csv files from result_dir with full path
-    
-    """
-    predict_csv = [f for f in next(os.walk(result_dir))[2] if sub_str in f]
-    return [os.path.join(result_dir, f) for f in predict_csv]
-
-##############################
-# Other dir definitions
-##############################
-# because we now have the required information
-
-# check for MLFLOW tracking server
-MLFLOW_AVAIL = url_avail(url=os.getenv('MLFLOW_TRACKING_URI'))
-
 # Result dirs
-lrr = last_run_result()
+lrr = last_run_result(EXPERIMENT_OUTDIR)
 LAST_RUN_RESULT = os.path.join(EXPERIMENT_OUTDIR, lrr)
-CURRENT_RUN_RESULT = os.path.join(EXPERIMENT_OUTDIR, current_run_result(lrr))
+CURRENT_RUN_RESULT = current_run_result(lrr, EXPERIMENT_OUTDIR, EXPERIMENT_NAME, MODEL_NAME)
 
 # Compile model path 
 # if RUN provided, use {EXPERIMENT_NAME}_{MODEL_NAME}_RUN
@@ -173,8 +106,16 @@ else:
     RUN_RESULT = os.path.join(EXPERIMENT_NAME + "_" + MODEL_NAME + "_" + RUN)
 
 MODEL_PATH = os.path.join(EXPERIMENT_OUTDIR, RUN_RESULT, "model")
+
+# other directories for ludwig processes
+# - evaluate: TEST_OUTDIR
+# - predict: PREDICT_OUTDIR
+# - train: RUN_RESULT_DIR
 TEST_OUTDIR = os.path.join(EXPERIMENT_OUTDIR, RUN_RESULT)
 RUN_RESULT_DIR = PREDICT_OUTDIR = TEST_OUTDIR
+
+# check for MLFLOW tracking server
+MLFLOW_AVAIL = url_avail(url=os.getenv('MLFLOW_TRACKING_URI'))
 
 ##############################
 # End of Configuration
