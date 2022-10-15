@@ -265,7 +265,6 @@ rule predict:
         mlflow="--mlflow" if MLFLOW_AVAIL else "",
         ssuo="--skip_save_unprocessed_output",
         sstp="--skip_save_predictions",
-        predict_csv = predict_csv_files(PREDICT_OUTDIR),
     shell:
         "cd {LUDWIG_DIR} && ludwig predict --dataset {input.eval_set} --output_directory {PREDICT_OUTDIR} --model_path {input.model_path} {params.ssuo} {params.mlflow}"
 

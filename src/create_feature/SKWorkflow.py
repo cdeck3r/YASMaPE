@@ -18,12 +18,12 @@ class SKWorkflow:
         {"delete_all_output": "True"} will delete all workflow's output files.    
 
     """
-    def __init__(self, logger):
+    def __init__(self, logger, snakefile="Snakefile", config_yaml="config.yaml"):
         self.logger = logger
         self.sk_config = {}
         self.sk_param = {}
-        self.snakefile = "Snakefile"
-        self.config_yaml = "config.yaml"
+        self.snakefile = snakefile
+        self.config_yaml = config_yaml
         
     def config_workflow(self, cfg_params):
         self.sk_config = self._get_workflow_config_yaml()

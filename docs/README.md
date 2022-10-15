@@ -49,6 +49,8 @@ The following UML component diagram shows the project's ML pipeline.
 
 YASMaPE runs lots of experiments. We use [mlflow](https://mlflow.org/) for ML lifecycle management and experiment tracking.
 
+> Convention: Queues are named according to the scheme `q_{container name}.{task_name}`.
+
 ### Coordination across Containers
 
 Software components run in docker containers. Coordination runs task distributed [celery](https://docs.celeryq.dev/en/stable/) as a task queuing system. It utilize [rabbitmq](https://www.rabbitmq.com/) to distribute tasks to workers and to enable the distributed coordination. Using celery a workflow in one container can start a workflow in other container.
@@ -88,6 +90,42 @@ Rabbitmq records all celery task executions. You may want to review previous exe
 ## ludwig
 
 [ludwig](https://ludwig.ai/) is the YASMaPE's workhorse.
+
+
+> Conventions: 
+> 
+> data directory: `/YASMaPE/data/{symbol}`
+> stock data: `{data dir}/stockdata.csv`
+> training data: `{data dir}/train_set.parquet`
+> evaluation data: `{data dir}/eval_set.parquet`
+> preprocessed data: `{data dir}/preprocess/{train|eval_set}.{training|test}.hdf5`
+> experiment config file: `{data dir}/ludwig/{experiment}_{model}.yaml`
+
+ludwig operates on a tree of files and directories:
+
+```
+/YASMaPE/data/{symbol}
+├── eval_set.parquet
+├── train_set.parquet
+└── ludwig
+    ├── classification
+    │   ├── classification_retgt5
+    │   ├── classification_retgt5_1
+    │   ├── classification_retgt10
+    │   ├── classification_retgt10_1
+    │   ├── classification_retgt{x}_{n}
+    ├── preprocess
+    │   ├── eval_set.test.hdf5
+    │   ├── train_set.meta.json
+    │   └── train_set.training.hdf5
+    ├── regression
+    │   ├── regression_return
+    │   ├── regression_return_0
+    │   ├── regression_return_{n}
+    ├── classification_retgt5.yaml
+    ├── classification_retgt10.yaml
+    └── regression_return.yaml 
+```
 
 ## mflow
 
