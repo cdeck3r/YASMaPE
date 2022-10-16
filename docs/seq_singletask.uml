@@ -1,0 +1,35 @@
+@startuml
+
+participant "director" as dir
+queue "q_ludwig.train" as q <<celery>>
+participant "ludwig" as ludwig <<container>>
+
+' 1st task call
+dir -> q: sendTask
+q -> ludwig: consume
+return state = STARTED
+q --> dir: ack
+ludwig -> ludwig: start workflow
+activate ludwig
+
+' query state
+dir -> q: query state
+q --> dir: state >= STARTED
+
+ludwig -> ludwig: run workflow
+
+' 2nd task call
+dir -> q: sendTask
+q --> dir: state = PENDING
+dir -> dir: timeout
+dir -> q: revoke
+q -> q: delete task
+destroy q
+
+ludwig -> ludwig: workflow done
+
+deactivate ludwig
+
+ludwig --> q: state=FINISHED
+
+@enduml

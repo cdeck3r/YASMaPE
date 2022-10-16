@@ -32,6 +32,12 @@ We will track results on a [separate page](results.md) using [modelcards](https:
 
 ## Feature Engineering
 
+The [`create_feature` notebook](../notebooks/create_feature.ipynb) implements the feature engineering. It creates two [parquet](https://parquet.apache.org/) files:
+
+* `train_set.parquet`
+* `eval_set.parquet`
+
+
 _windowing, etc._
 
 
@@ -86,6 +92,22 @@ Afterwards, point your browser to http://localhost:8000 to access director's Web
 
 Rabbitmq records all celery task executions. You may want to review previous executions and other KPIs using [flower](https://flower.readthedocs.io/en/latest/). Flower is automatically started with the director. Point your brower to http://localhost:5555 to access flower. 
 
+### Parallel Execution and Scale-up
+
+A container may run several workflows. A celery worker configures several tasks, where each task is assigned to a queue named `q_{container}.{task_name}`. A task starts a workflow or a workflow rule. The worker concurrency is set to a single task. The consequences are:
+
+* Each container implements a single celery worker only. 
+* Each worker monitors several queues, but only processes one task at a time.
+
+If a worker X is already busy with a task, that worker X will not consume another task submitted to any of the queues it is subscribed to. The task issuer monitors the queue and revokes the task after a pre-defined timeout. As a consequence, a container only runs one task at a time. There is no parallel task execution within a single container.
+
+The situation is illustrated in the sequence diagram below.
+
+![Sequence diagram of single task execution]()
+
+However, if there are several containers up and running, there are several workers that monitor the queues. So, when there is a second task enqueued, the other worker from the parallel container may consume the task and start a workflow. Although, each worker and container run a single task only, horizontal scaling by running multiple containers in parallel is enabled. The sequence diagram below depicts parallel task execution using multiple containers.
+
+![Sequence diagram of multiple task execution]()
 
 ## ludwig
 
@@ -94,12 +116,12 @@ Rabbitmq records all celery task executions. You may want to review previous exe
 
 > Conventions: 
 > 
-> data directory: `/YASMaPE/data/{symbol}`
-> stock data: `{data dir}/stockdata.csv`
-> training data: `{data dir}/train_set.parquet`
-> evaluation data: `{data dir}/eval_set.parquet`
-> preprocessed data: `{data dir}/preprocess/{train|eval_set}.{training|test}.hdf5`
-> experiment config file: `{data dir}/ludwig/{experiment}_{model}.yaml`
+> * data directory: `/YASMaPE/data/{symbol}`
+> * stock data: `{data dir}/stockdata.csv`
+> * training data: `{data dir}/train_set.parquet`
+> * evaluation data: `{data dir}/eval_set.parquet`
+> * preprocessed data: `{data dir}/preprocess/{train|eval_set}.{training|test}.hdf5`
+> * experiment config file: `{data dir}/ludwig/{experiment}_{model}.yaml`
 
 ludwig operates on a tree of files and directories:
 
