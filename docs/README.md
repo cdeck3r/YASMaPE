@@ -101,11 +101,13 @@ A container may run several workflows. A celery worker configures several tasks,
 
 If a worker X is already busy with a task, that worker X will not consume another task submitted to any of the queues it is subscribed to. The task issuer monitors the queue and revokes the task after a pre-defined timeout. As a consequence, a container only runs one task at a time. There is no parallel task execution within a single container.
 
-The situation is illustrated in the sequence diagram below.
+The situation is illustrated in the sequence diagram below. The ludwig container consumes a training task from the `q_ludwig.train` queue and starts the training workflow afterwards. A second task enqueued cannot be consumed and is revoked after a timeout.
 
 ![Sequence diagram of single task execution](http://www.plantuml.com/plantuml/png/1S6n3W8X303GNz4Ve8ERcuEZYOcJawcbWGOeTxJD_VwzTnMb7falrNspEy328nNn6lymNZJLMJtH742PgTqMV1-V5xwVC50KyYG3u_rdegMpexKKevy0)
 
-However, if there are several containers up and running, there are several workers that monitor the queues. So, when there is a second task enqueued, the other worker from the parallel container may consume the task and start a workflow. Although, each worker and container run a single task only, the pipeline scales horizontally by running multiple containers in parallel. The sequence diagram below depicts parallel task execution using multiple containers.
+However, if there are several containers up and running, there are several workers which monitor the queues. So, when there is a second task enqueued, the other worker from the parallel container may consume the task and start a workflow. Although, each worker and container run a single task only, the pipeline scales horizontally by running multiple containers in parallel. 
+
+The sequence diagram below depicts parallel task execution using multiple containers. The ludwig container consumes a training task from the `q_ludwig.train` queue and starts the training workflow. A second task enqueued is consumed by another ludwig containers which monitors the same queue.
 
 ![Sequence diagram of multiple task execution](http://www.plantuml.com/plantuml/png/1S4n3a8n203Gg-W5ok3cvk1eOkBaP90IIrgelq3-zVzxPp4QMVdK8lv-1LYubvz4osywBveMR55eAb1bwfS5xzlhWSyxA8f1dUJWl7qqHqYWzv8w3W00)
 
