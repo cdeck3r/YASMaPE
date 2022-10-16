@@ -107,7 +107,7 @@ The situation is illustrated in the sequence diagram below. The ludwig container
 
 However, if there are several containers up and running, there are several workers which monitor the queues. So, when there is a second task enqueued, the other worker from the parallel container may consume the task and start a workflow. Although, each worker and container run a single task only, the pipeline scales horizontally by running multiple containers in parallel. 
 
-The sequence diagram below depicts parallel task execution using multiple containers. The ludwig container consumes a training task from the `q_ludwig.train` queue and starts the training workflow. A second task enqueued is consumed by another ludwig containers which monitors the same queue.
+The sequence diagram below depicts parallel task execution using multiple containers. The ludwig container consumes a training task from the `q_ludwig.train` queue and starts the training workflow. A second enqueued task is consumed by another ludwig container which monitors the same queue. That other ludwig container starts its training workflow, now running parallel to the one from the first container.
 
 ![Sequence diagram of multiple task execution](http://www.plantuml.com/plantuml/png/1S4n3a8n203Gg-W5ok3cvk1eOkBaP90IIrgelq3-zVzxPp4QMVdK8lv-1LYubvz4osywBveMR55eAb1bwfS5xzlhWSyxA8f1dUJWl7qqHqYWzv8w3W00)
 
