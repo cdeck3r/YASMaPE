@@ -8,9 +8,9 @@ start
 :download stock data;
 :create_feature;
   fork
-    :train_set.csv|
+    :train_set|
   fork again
-    :eval_set.csv|
+    :eval_set|
   end fork
 
 :machine learning
