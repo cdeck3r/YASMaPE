@@ -92,7 +92,7 @@ Afterwards, point your browser to http://localhost:8000 to access director's Web
 
 Rabbitmq records all celery task executions. You may want to review previous executions and other KPIs using [flower](https://flower.readthedocs.io/en/latest/). Flower is automatically started with the director. Point your brower to http://localhost:5555 to access flower. 
 
-### Parallel Execution and Scale-up
+### Task Concurrency and Scale-up Pipeline
 
 A container may run several workflows. A celery worker configures several tasks, where each task is assigned to a queue named `q_{container}.{task_name}`. A task starts a workflow or a workflow rule. The worker concurrency is set to a single task. The consequences are:
 
@@ -103,11 +103,11 @@ If a worker X is already busy with a task, that worker X will not consume anothe
 
 The situation is illustrated in the sequence diagram below.
 
-![Sequence diagram of single task execution]()
+![Sequence diagram of single task execution](http://www.plantuml.com/plantuml/png/1S6n3W8X303GNz4Ve8ERcuEZYOcJawcbWGOeTxJD_VwzTnMb7falrNspEy328nNn6lymNZJLMJtH742PgTqMV1-V5xwVC50KyYG3u_rdegMpexKKevy0)
 
-However, if there are several containers up and running, there are several workers that monitor the queues. So, when there is a second task enqueued, the other worker from the parallel container may consume the task and start a workflow. Although, each worker and container run a single task only, horizontal scaling by running multiple containers in parallel is enabled. The sequence diagram below depicts parallel task execution using multiple containers.
+However, if there are several containers up and running, there are several workers that monitor the queues. So, when there is a second task enqueued, the other worker from the parallel container may consume the task and start a workflow. Although, each worker and container run a single task only, the pipeline scales horizontally by running multiple containers in parallel. The sequence diagram below depicts parallel task execution using multiple containers.
 
-![Sequence diagram of multiple task execution]()
+![Sequence diagram of multiple task execution](http://www.plantuml.com/plantuml/png/1S4n3a8n203Gg-W5ok3cvk1eOkBaP90IIrgelq3-zVzxPp4QMVdK8lv-1LYubvz4osywBveMR55eAb1bwfS5xzlhWSyxA8f1dUJWl7qqHqYWzv8w3W00)
 
 ## ludwig
 
