@@ -8,11 +8,15 @@ This page collects all documentation ressource for YASMaPE.
 * [Machine Learning (ML) Pipeline](#machine-learning-ml-pipeline)
   * [Coordination across Containers](#coordination-across-containers)
   * [Orchestration](#orchestration)
-* [ludwig](#ludwig)
-* [mflow](#mflow)
+  * [Task Concurrency and Pipeline Scaling](#task-concurrency-and-pipeline-scaling)
+* [Model Training using ludwig](#model-training-using-ludwig)
+* [Model Lifecylce Management using mflow](#model-lifecylce-management-using-mflow)
 * [Modelcards](#modelcards)
+* [Versioning](#versioning)
+* [Testing and Explainability](#testing-and-explainability)
 * [Gist](#gist)
 
+<!-- Created by https://github.com/ekalinin/github-markdown-toc -->
 
 ## YASMaPE Problem Formulation
 
@@ -92,7 +96,7 @@ Afterwards, point your browser to http://localhost:8000 to access director's Web
 
 Rabbitmq records all celery task executions. You may want to review previous executions and other KPIs using [flower](https://flower.readthedocs.io/en/latest/). Flower is automatically started with the director. Point your brower to http://localhost:5555 to access flower. 
 
-### Task Concurrency and Scale-up Pipeline
+### Task Concurrency and Pipeline Scaling
 
 A container may run several workflows. A celery worker configures several tasks, where each task is assigned to a queue named `q_{container}.{task_name}`. A task starts a workflow or a workflow rule. The worker concurrency is set to a single task. The consequences are:
 
@@ -111,7 +115,7 @@ The sequence diagram below depicts parallel task execution using multiple contai
 
 ![Sequence diagram of multiple task execution](http://www.plantuml.com/plantuml/png/1S4n3a8n203Gg-W5ok3cvk1eOkBaP90IIrgelq3-zVzxPp4QMVdK8lv-1LYubvz4osywBveMR55eAb1bwfS5xzlhWSyxA8f1dUJWl7qqHqYWzv8w3W00)
 
-## ludwig
+## Model Training using ludwig
 
 [ludwig](https://ludwig.ai/) is the YASMaPE's workhorse.
 
@@ -151,7 +155,7 @@ ludwig operates on a tree of files and directories:
     └── regression_return.yaml 
 ```
 
-## mflow
+## Model Lifecylce Management using mflow
 
 [mlflow](https://mlflow.org/) supports ML model lifecycle management. It records ML experiments, i.e. their code, data, config and results. mlflow collects data and artifacts and offers a REST-enabled query possibility. 
 
@@ -164,6 +168,23 @@ We document the results and the ML models producing them using [verifyml's model
 The modelcard sources some data from the mflow.
 
 Check out [`create_modelcard` notebook](../notebooks/create_modelcard.ipynb).
+
+## Versioning 
+
+YASMaPE consist of 
+
+* data
+* code
+* model
+
+All artifacts stand under version control.
+
+_to be completed_ https://dvc.org/
+
+## Testing and Explainability
+
+_to be completed_ [whylogs](https://github.com/whylabs/whylogs)
+
 
 ## Gist
 
