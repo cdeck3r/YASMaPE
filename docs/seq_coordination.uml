@@ -4,10 +4,10 @@ skinparam componentStyle uml2
 skinparam linetype ortho
 
 
-participant "<<container>>\ndirector" as dir
-participant "<<celery queue>>\nrabbitmq" as q #00ff00
-participant "<<container>>\njupyter" as jup
-participant "<<storage>>\nfile system" as fs
+participant "director" as dir <<container>>
+participant "rabbitmq" as q <<celery queue>> #00ff00 
+participant "jupyter" as jup <<container>>
+participant "file system" as fs <<storage>>
 
 jup -> jup: start worker
 activate jup
