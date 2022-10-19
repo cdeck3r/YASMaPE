@@ -1,0 +1,129 @@
+"""Run ludwig to initally setup the yaml config files
+
+Example call:
+snakemake --cores all -s setupyaml.sk --config symbol="MUX.DE"
+
+Params:
+    symbol: the stock symbol
+
+"""
+
+
+##############################
+# imports
+##############################
+
+import sys
+import os
+import tempfile
+
+from util import get_header
+from util import get_target_vars
+
+##############################
+# Configuration
+##############################
+
+# config anchor
+workdir: "/YASMaPE/src/ludwig"
+configfile: "config.yaml"
+
+# paths to image directories from config.yaml
+DATA_ROOT_DIR = config["DATA_ROOT_DIR"]
+assert DATA_ROOT_DIR
+
+# params from CLI
+SYMBOL = str(config["symbol"]) if "symbol" in config is not None else sys.exit("No symbol provided. Use --config symbol=...")
+
+# Directories
+INPUT_DIR = os.path.join(DATA_ROOT_DIR, SYMBOL)
+LUDWIG_DIR = os.path.join(INPUT_DIR, "ludwig")
+INIT_CONFIG_DIR = os.path.join(LUDWIG_DIR, "init_config")
+TMPDIR = tempfile.mkdtemp()
+
+# Files
+TRAIN_DATASET = "train_set.parquet"
+
+#
+# Some specific helper functions
+#
+HEADER = get_header(os.path.join(INPUT_DIR, TRAIN_DATASET))
+
+def get_classification_targets():
+    targets = get_target_vars(HEADER)
+    return [v for v in targets if v!='return']
+
+def get_regression_targets():
+    targets = get_target_vars(HEADER)
+    return [v for v in targets if v=='return']
+
+def yq_select_expr():
+    """Returns a yq select expression for input_features names
+    
+    The select expression ORs all target variable names and
+    can be used to remove the target variables from the input features.
+    
+    Ex. 
+     - select(.name == "return")
+     - select(.name == "return" or .name == "retgt25")
+    
+    Returns
+    -------
+    str
+        yq select expression of the above form    
+    """
+    
+    targets = get_target_vars(HEADER)
+    select_conditions = ['.name == \"'+t+'\"' for t in targets]
+    select_conditions_expr = ' or '.join(select_conditions)
+    select_expr = 'select(' + select_conditions_expr + ')'
+    
+    return select_expr
+
+# target variable names
+CLASS_TARGETS = get_classification_targets()
+REGRESS_TARGETS = get_regression_targets()
+
+
+##############################
+# End of Configuration
+##############################
+
+
+
+##############################
+# Rules start here
+##############################
+
+ruleorder: init_config > remove_targets_from_input_features
+
+# yaml file follows convention {experiment_name}_{model_name}.yaml
+rule all:
+    input:
+        expand(os.path.join(LUDWIG_DIR, "classification_{target}.yaml"), target=CLASS_TARGETS),
+        expand(os.path.join(LUDWIG_DIR, "regression_{target}.yaml"), target=REGRESS_TARGETS),
+
+# Example
+# ludwig init_config --target return --output /path/to/regression_return.yaml
+#
+rule init_config:
+    input:
+        os.path.join(INPUT_DIR, TRAIN_DATASET),
+    output:
+        os.path.join(INIT_CONFIG_DIR, "{experiment_name}_{target}.yaml"),
+    shell:
+        "cp /YASMaPE/data/MUX.DE/ludwig/regress.yaml {output}"
+        
+        
+# Example
+# yq 'del(.input_features.[] | select(.name == "return"))' regression_return.yaml
+# 
+rule remove_targets_from_input_features:
+    input:
+        os.path.join(INIT_CONFIG_DIR, "{experiment_name}_{target}.yaml"),
+    output:
+        os.path.join(LUDWIG_DIR, "{experiment_name}_{target}.yaml"),
+    params:
+        yq_select = yq_select_expr()
+    shell:
+        "yq 'del(.input_features.[] | {params.yq_select})' {input} > {output}"

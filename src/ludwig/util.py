@@ -6,6 +6,7 @@ import os
 import pathlib
 import re
 import requests
+import pandas as pd
 
 
 def last_run_result(exp_outdir):
@@ -127,4 +128,90 @@ def url_avail(url):
         pass
 
     return False
+
+########################################################################
+#
+# Helper functions for setupyaml.sk
+#
+########################################################################
+
+def all_targets_vars():
+    """All possible target variable names
     
+    Returns
+    -------
+    list
+        all possible target variable names  
+    
+    """
+
+    # classification targets
+    l = ['retgt'+str(i) for i in range(1,100)]
+    # regression target
+    l.append('return')
+    return l
+    
+def get_header(pqfile=None):
+    """Return the header names list as a from the parquet file.
+
+    Parameters
+    ----------
+    pqfile :  path  
+        Full path of the train parquet file
+    
+
+    Returns
+    -------
+    list
+        the header as a list of columns names 
+    
+    """    
+    # open file, read header columns and create list, return list
+    df = pd.read_parquet(pqfile)
+    header_columns = list(df.columns)
+    return header_columns
+
+def get_target_vars(header=get_header(), targets=all_targets_vars()):
+    """Returns availabe targets vars from the header.
+    
+    This function selects the availabe targets vars from all possible target vars.
+
+    Parameters
+    ----------
+    header :  list
+        header as a list of columns names from the parquet file containing the data
+        
+    targets : list
+        all possible target variable names
+
+    Returns
+    -------
+    list
+        the availabe target vars  
+
+    """
+
+    target_vars = [t for t in header if t in targets]
+    return target_vars
+
+def get_input_vars(header=get_header(), targets=all_targets_vars()):
+    """Removs all possible target variable from the form header columns names.
+    
+    As a result, this function return the availabe input variables.
+    
+    Parameters
+    ----------
+    header :  list
+        header as a list of columns names from the parquet file containing the data
+        
+    targets : list
+        all possible target variable names
+
+    Returns
+    -------
+    list
+        the availabe input vars    
+    """
+    
+    input_vars = [c for c in header if c not in targets]
+    return input_vars
