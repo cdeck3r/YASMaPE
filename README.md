@@ -41,9 +41,10 @@ YASMaPE is [multi-container Docker application](https://docs.docker.com/compose/
 
 Please see [`docs`](docs) folder for an extensive documentation 
 
-## Dev System
+## Software System Setup
 
-We provide a `docker-compose` file to setup a multi-container application composed of containers as microservices, which are loosely coupled by a distributed task queue. The diagram below depicts the containers, their dependencies and ports (number in circles). The diagram sources from this [medium.com article](https://medium.com/@krishnakummar/creating-block-diagrams-from-your-docker-compose-yml-da9d5a2450b4).
+A `docker-compose` file provides a setup for a multi-container application composed of containers as microservices, which are loosely coupled by a distributed task queue. The ML pipelines are controlled via the [director](https://ovh.github.io/celery-director/) on http://localhost:8000.
+The diagram below depicts the containers, their dependencies and ports (number in circles). The diagram sources from this [medium.com article](https://medium.com/@krishnakummar/creating-block-diagrams-from-your-docker-compose-yml-da9d5a2450b4).
 
 ![docker-compose dependencies](docs/docker-compose.png)
 
@@ -65,13 +66,24 @@ VOL_DIR=/dev/YASMaPE
 
 ```bash
 docker-compose build yasmape
+docker-compose build ludwig
+docker-compose build jupyter
+docker-compose build mlflow
+docker-compose build director
 ```
 
-**Spin up** the container and get a shell from the container
+**Spin up** the containers and get a shell from a container
 ```bash
 docker-compose up -d yasmape
+docker-compose up -d ludwig
+docker-compose up -d jupyter
+docker-compose up -d director
+
+# optionally, get a shell on the yasmape container
 docker exec -it yasmape /bin/bash
 ```
+
+Finally, point you browser to http://localhost:8000 to retrieve the director interface to run the ML pipelines for distributed processing across the containers.
 
 ## License
 
