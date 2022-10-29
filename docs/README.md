@@ -1,6 +1,6 @@
 # YASMaPE Documentation 
 
-This page collects all documentation ressource for YASMaPE.
+This page collects all documentation ressource for YASMaPE. The project heavily utilizes the [convention over configuration](https://en.wikipedia.org/wiki/Convention_over_configuration) software design paradigm. The subsections explain the practiced conventions.
 
 * [YASMaPE Problem Formulation](#yasmape-problem-formulation)
 * [Results](#results)
@@ -118,7 +118,38 @@ The sequence diagram below depicts parallel task execution using multiple contai
 ## Model Training using ludwig
 
 [ludwig](https://ludwig.ai/) is the YASMaPE's workhorse.
+The pipeline's part on ludwig runs workflows which support the basic [ludwig cli commands](https://ludwig.ai/0.6/user_guide/command_line_interface/). Run them in the default order:
 
+1. preprocess
+1. init_config
+1. experiment
+
+Addtionally, the ludwig workflow may run the following cli commands:
+
+* evaluate
+* predict
+
+At the very beginning we start the `preprocess` task to process the feature vectors. It results in `.parquet` files for training and test/evaluation data. Both files are stored in `/YASMaPE/data/{symbol}/ludwig/preprocess/` in the `.hdf5` format.
+
+Next, the `init_config` workflow starts and generates ludwig's yaml formatted config files.
+
+Example:
+```
+snakemake --cores all -s setupyaml.sk --config symbol="MUX.DE"
+```
+
+It will generate all yaml files for the regression and the classification experiments in `/YASMaPE/data/{symbol}/ludwig/init_config`, where `{symbol}` is the stock symbol, e.g. MUX.DE. Additionally, this workflow also cleans the initial yaml files. As a result, these files can be immediately used for experiments. The workflow to create each yaml files is illustrated in [`../src/ludwig/setupyaml.svg`](../src/ludwig/setupyaml.svg).
+
+Afterwards, ludwig is able to run experiments. The following code shows the main workflow command for the regression problem using the `regression_return.yaml` config file. The ludwig workflow running an experiment is illustrated in [`../src/ludwig/experiment.svg`](../src/ludwig/experiment.svg).
+
+Example:
+```
+snakemake --cores all --config symbol="MUX.DE" yaml="regression_return.yaml" -R experiment
+```
+
+It consumes the training and evaluation data and trains a model. Finally, the model is stored in a directory named after the experiment, e.g. `/YASMaPE/data/{symbol}/ludwig/regression/regression_return_{n}` for the n-th instanciation of a regression experiment with `return` as target variable. The workflow logs the experiment in {mlflow](#model-lifecylce-management-using-mflow). 
+
+The ludwig workflows use the following convention in YASMaPE:
 
 > Conventions: 
 > 
@@ -126,10 +157,10 @@ The sequence diagram below depicts parallel task execution using multiple contai
 > * stock data: `{data dir}/stockdata.csv`
 > * training data: `{data dir}/train_set.parquet`
 > * evaluation data: `{data dir}/eval_set.parquet`
-> * preprocessed data: `{data dir}/preprocess/{train|eval_set}.{training|test}.hdf5`
+> * preprocessed data: `{data dir}/ludwig/preprocess/{train|eval_set}.{training|test}.hdf5`
 > * experiment config file: `{data dir}/ludwig/{experiment}_{model}.yaml`
 
-ludwig operates on a tree of files and directories:
+The ludwig workflows operate on a tree of files and directories:
 
 ```
 /YASMaPE/data/{symbol}
@@ -154,6 +185,11 @@ ludwig operates on a tree of files and directories:
     ├── classification_retgt10.yaml
     └── regression_return.yaml 
 ```
+
+The ludwig workflow for `evaluate` compares a selected (default: last) model performance to new _(unseen)_ data containing ground truth. The workflow for `predict` just takes the selected (default: last) model to predict the target variable's value from new data.  The workflow illustrations are
+
+* [`../src/ludwig/evaluate.svg`](../src/ludwig/evaluate.svg)
+* [`../src/ludwig/predict.svg`](../src/ludwig/predict.svg)
 
 ## Model Lifecylce Management using mflow
 
