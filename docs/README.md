@@ -144,6 +144,7 @@ Afterwards, ludwig is able to run experiments. The following code shows the main
 
 Example:
 ```
+# Note the parameter: ... -R experiment
 snakemake --cores all --config symbol="MUX.DE" yaml="regression_return.yaml" -R experiment
 ```
 
