@@ -131,7 +131,7 @@ Addtionally, the ludwig workflow may run the following cli commands:
 
 At the very beginning we start the `preprocess` task to process the feature vectors. It results in `.parquet` files for training and test/evaluation data. Both files are stored in `/YASMaPE/data/{symbol}/ludwig/preprocess/` in the `.hdf5` format.
 
-Next, the `init_config` workflow starts and generates ludwig's yaml formatted config files.
+Next, the `init_config` workflow starts and generates ludwig's yaml formatted config files describing the model for the experiment.
 
 Example:
 ```
@@ -140,7 +140,7 @@ snakemake --cores all -s setupyaml.sk --config symbol="MUX.DE"
 
 It will generate all yaml files for the regression and the classification experiments in `/YASMaPE/data/{symbol}/ludwig/init_config`, where `{symbol}` is the stock symbol, e.g. MUX.DE. Additionally, this workflow also cleans the initial yaml files. As a result, these files can be immediately used for experiments. The workflow to create each yaml files is illustrated in [`../src/ludwig/setupyaml.svg`](../src/ludwig/setupyaml.svg).
 
-Afterwards, ludwig is able to run experiments. The following code shows the main workflow command for the regression problem using the `regression_return.yaml` config file. The ludwig workflow running an experiment is illustrated in [`../src/ludwig/experiment.svg`](../src/ludwig/experiment.svg).
+Afterwards, ludwig is able to run experiments. The following code shows the main workflow command for the regression problem using the `regression_return.yaml` experiment config file. The ludwig workflow running an experiment is illustrated in [`../src/ludwig/experiment.svg`](../src/ludwig/experiment.svg).
 
 Example:
 ```
