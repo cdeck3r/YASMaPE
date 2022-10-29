@@ -51,14 +51,35 @@ HEADER = get_header(os.path.join(INPUT_DIR, TRAIN_DATASET))
 
 def get_classification_targets():
     targets = get_target_vars(HEADER)
-    return [v for v in targets if v!='return']
+    # all classification targets start with 'retgt'
+    return [v for v in targets if v.startswith('retgt') ]
 
 def get_regression_targets():
     targets = get_target_vars(HEADER)
     return [v for v in targets if v=='return']
 
-def yq_select_expr():
-    """Returns a yq select expression for input_features names
+def yq_select_expr_var_names(var_names):
+    """Compiles the yq select expression, which ORs a list of variable names
+
+    Parameters
+    ----------
+    var_names :  list  
+        list of variable names to be ORed
+
+    Returns
+    -------
+    str
+        yq select expression of the above form    
+    """
+
+    select_conditions = ['.name == \"'+n+'\"' for n in var_names]
+    select_conditions_expr = ' or '.join(select_conditions)
+    select_expr = 'select(' + select_conditions_expr + ')'
+
+    return select_expr
+
+def yq_select_expr_4_target_var_names():
+    """Returns a yq select expression for target variable names
     
     The select expression ORs all target variable names and
     can be used to remove the target variables from the input features.
@@ -74,11 +95,29 @@ def yq_select_expr():
     """
     
     targets = get_target_vars(HEADER)
-    select_conditions = ['.name == \"'+t+'\"' for t in targets]
-    select_conditions_expr = ' or '.join(select_conditions)
-    select_expr = 'select(' + select_conditions_expr + ')'
+
+    return yq_select_expr_var_names(targets)
+
+def yq_select_expr_4_unused_vars():
+    """Returns a yq select expression for unused vars
     
-    return select_expr
+    The select expression ORs all unused variable names and
+    can be used to remove the unused variables from the input features.
+    
+    Ex. 
+     - select(.name == "partition")
+     - select(.name == "partition" or .name == "date")
+    
+    Returns
+    -------
+    str
+        yq select expression of the above form    
+    """
+    
+    unused_vars = ['partition', 'date']
+
+    return yq_select_expr_var_names(unused_vars)
+
 
 # target variable names
 CLASS_TARGETS = get_classification_targets()
@@ -95,7 +134,8 @@ REGRESS_TARGETS = get_regression_targets()
 # Rules start here
 ##############################
 
-ruleorder: init_config > remove_targets_from_input_features
+#ruleorder: init_config > remove_targets_from_input_features > remove_unused_vars_from_input_features
+#ruleorder: init_config > copy_to_final_destination
 
 # yaml file follows convention {experiment_name}_{model_name}.yaml
 rule all:
@@ -111,19 +151,61 @@ rule init_config:
         os.path.join(INPUT_DIR, TRAIN_DATASET),
     output:
         os.path.join(INIT_CONFIG_DIR, "{experiment_name}_{target}.yaml"),
+    shell: # this is for testing purposes only
+        "ludwig init_config --dataset {input} -t {wildcards.target} --output {output}"
+
+# Example
+# yq '(.input_features.[] |  select(.name=="price")+= {"encoder": "rnn"}' <yaml file>
+rule add_config_to_price_input_feature:
+    input:
+        rules.init_config.output,
+    output:
+        temp(os.path.join(TMPDIR, "add_config_to_price" ,"{experiment_name}_{target}.yaml")),
+    params:
+        select_price_feature = '.input_features.[] |  select(.name=="price")',
+        timeseries = '{"type": "rnn", "embedding_size": 32, "state_size": 32}',
     shell:
-        "cp /YASMaPE/data/MUX.DE/ludwig/regress.yaml {output}"
-        
-        
+        "yq '({params.select_price_feature}).type=\"timeseries\", ({params.select_price_feature}).encoder={params.timeseries} ' {input} > {output}"  
+# Example
+# yq '(.output_features[]).decoder={"num_fc_layers":4,"output_size":32}' <yaml file>
+rule add_config_to_output_features:
+    input:
+        rules.add_config_to_price_input_feature.output,
+    output:
+        temp(os.path.join(TMPDIR, "add_config_to_output" ,"{experiment_name}_{target}.yaml")),
+    params:
+        select_feature = '(.output_features[]).decoder',
+        feature_params = '{"num_fc_layers":4,"output_size":32}',
+    shell:
+        "yq '{params.select_feature}={params.feature_params}' {input} > {output}"  
+
 # Example
 # yq 'del(.input_features.[] | select(.name == "return"))' regression_return.yaml
 # 
 rule remove_targets_from_input_features:
     input:
-        os.path.join(INIT_CONFIG_DIR, "{experiment_name}_{target}.yaml"),
+        rules.add_config_to_output_features.output,   
     output:
-        os.path.join(LUDWIG_DIR, "{experiment_name}_{target}.yaml"),
+        temp(os.path.join(TMPDIR, "remove_targets" ,"{experiment_name}_{target}.yaml")),
     params:
-        yq_select = yq_select_expr()
+        yq_select = yq_select_expr_4_target_var_names()
+    shell:
+         "yq 'del(.input_features.[] | {params.yq_select})' {input} > {output}"
+
+rule remove_unused_vars_from_input_features:
+    input:
+        rules.remove_targets_from_input_features.output
+    output:
+        temp(os.path.join(TMPDIR, "remove_unused" ,"{experiment_name}_{target}.yaml")),      
+    params:
+        yq_select = yq_select_expr_4_unused_vars()
     shell:
         "yq 'del(.input_features.[] | {params.yq_select})' {input} > {output}"
+
+rule copy_to_final_destination:
+    input:
+        rules.remove_unused_vars_from_input_features.output
+    output:
+        os.path.join(LUDWIG_DIR, "{experiment_name}_{target}.yaml"),
+    shell:
+        "cp {input} {output}"

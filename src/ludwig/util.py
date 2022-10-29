@@ -122,7 +122,7 @@ def url_avail(url):
     
     """
     try:
-        re = requests.head(url, timeout=2)
+        r = requests.head(url, timeout=2)
         return r.status_code == 200
     except Exception:
         pass
@@ -151,7 +151,7 @@ def all_targets_vars():
     l.append('return')
     return l
     
-def get_header(pqfile=None):
+def get_header(pqfile):
     """Return the header names list as a from the parquet file.
 
     Parameters
@@ -171,7 +171,7 @@ def get_header(pqfile=None):
     header_columns = list(df.columns)
     return header_columns
 
-def get_target_vars(header=get_header(), targets=all_targets_vars()):
+def get_target_vars(header, targets=all_targets_vars()):
     """Returns availabe targets vars from the header.
     
     This function selects the availabe targets vars from all possible target vars.
@@ -194,7 +194,7 @@ def get_target_vars(header=get_header(), targets=all_targets_vars()):
     target_vars = [t for t in header if t in targets]
     return target_vars
 
-def get_input_vars(header=get_header(), targets=all_targets_vars()):
+def get_input_vars(header, targets=all_targets_vars()):
     """Removs all possible target variable from the form header columns names.
     
     As a result, this function return the availabe input variables.
