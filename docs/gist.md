@@ -77,3 +77,9 @@ docker run --rm -it --name dcv -v /home/user/blog:/input pmsipilot/docker-compos
 ```
 docker run --rm -it --name dcv -v /home/user/blog:/input pmsipilot/docker-compose-viz render -m image --force docker-compose.yml --output-file=topology-volumes.png --no-ports --no-networks
 ```
+
+## Creating svg images from snakemake rulegraphs
+
+Using the command `snakemake --rulegraph` snakemake outputs a dot formatted graph of the DAG formed from the rules. We feed the online REST API from https://quickchart.io/documentation/graphviz-api/ with the dot formatted rulegraph. 
+
+Have a look at [`../src/ludwig/generate_rulegraph.sh`](../src/ludwig/generate_rulegraph.sh).
