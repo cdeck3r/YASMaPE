@@ -43,7 +43,7 @@ Please see [`docs`](docs) folder for an extensive documentation
 
 ## Dev System
 
-We provide a `docker-compose` file to setup the system. The diagram below depicts the containers, their dependencies and ports (number in circles). The diagram sources from this [medium.com article](https://medium.com/@krishnakummar/creating-block-diagrams-from-your-docker-compose-yml-da9d5a2450b4).
+We provide a `docker-compose` file to setup a multi-container application composed of containers as microservices, which are loosely coupled by a distributed task queue. The diagram below depicts the containers, their dependencies and ports (number in circles). The diagram sources from this [medium.com article](https://medium.com/@krishnakummar/creating-block-diagrams-from-your-docker-compose-yml-da9d5a2450b4).
 
 ![docker-compose dependencies](docs/docker-compose.png)
 
