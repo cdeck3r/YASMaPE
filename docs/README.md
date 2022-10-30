@@ -139,7 +139,7 @@ Addtionally, the ludwig container may run the following tasks; no strict order r
 
 Each task issues a snakemake workflows, which runs the ludwig cli command. The figure depicts how a enqueued task activates a ludwig command.
 
-![Sequence diagram for calling ludwig cli commands]()
+![Sequence diagram for calling ludwig cli commands](http://www.plantuml.com/plantuml/png/1S4x3i8m303Ggy05ue6DZO4H2Oc9gGgsrLeu3lYZNh_ldSLGYxXSJrlcBwu0tlUsIcxrgM37QScM3US09CRlnU5zUptwymwZYm5D30Z-BrgqoxgWIgkX1m00)
 
 We explain the tasks and their details in the following paragraphs using the snakemake workflows as examples. 
 
