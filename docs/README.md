@@ -2,21 +2,32 @@
 
 This page collects all documentation ressource for YASMaPE. The project heavily utilizes the [convention over configuration](https://en.wikipedia.org/wiki/Convention_over_configuration) software design paradigm. The subsections explain the practiced conventions.
 
-* [YASMaPE Problem Formulation](#yasmape-problem-formulation)
-* [Results](#results)
-* [Feature Engineering](#feature-engineering)
-* [Machine Learning (ML) Pipeline](#machine-learning-ml-pipeline)
-  * [Coordination across Containers](#coordination-across-containers)
-  * [Orchestration](#orchestration)
-  * [Task Concurrency and Pipeline Scaling](#task-concurrency-and-pipeline-scaling)
-* [Model Training using ludwig](#model-training-using-ludwig)
-* [Model Lifecylce Management using mflow](#model-lifecylce-management-using-mflow)
-* [Modelcards](#modelcards)
-* [Versioning](#versioning)
-* [Testing and Explainability](#testing-and-explainability)
-* [Gist](#gist)
+<!--ts-->
+   * [YASMaPE Problem Formulation](#yasmape-problem-formulation)
+   * [Results](#results)
+   * [Feature Engineering](#feature-engineering)
+   * [Machine Learning (ML) Pipeline](#machine-learning-ml-pipeline)
+      * [Coordination across Containers](#coordination-across-containers)
+      * [Orchestration](#orchestration)
+      * [Task Concurrency and Pipeline Scaling](#task-concurrency-and-pipeline-scaling)
+   * [Model Training using ludwig](#model-training-using-ludwig)
+      * [Tasks](#tasks)
+      * [preprocess](#preprocess)
+      * [init_config](#init_config)
+      * [experiment](#experiment)
+      * [evaluate and predict](#evaluate-and-predict)
+      * [Conventions](#conventions)
+   * [Model Lifecylce Management using mflow](#model-lifecylce-management-using-mflow)
+   * [Modelcards](#modelcards)
+   * [Versioning](#versioning)
+   * [Testing and Explainability](#testing-and-explainability)
+   * [Gist](#gist)
 
 <!-- Created by https://github.com/ekalinin/github-markdown-toc -->
+<!-- Added by: root, at: Sun Oct 30 09:52:38 UTC 2022 -->
+
+<!--te-->
+
 
 ## YASMaPE Problem Formulation
 
