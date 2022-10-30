@@ -1,0 +1,25 @@
+@startuml
+skinparam monochrome true
+skinparam componentStyle uml2
+skinparam linetype ortho
+
+queue "q_ludwig.*" as q <<celery queue>> #00ff00 
+participant "ludwig" as ludwig <<container>>
+participant "workflow" as workflow <<snakemake>>
+participant "ludwig cli\ncommand" as cli 
+
+q -> ludwig: consume task
+ludwig -> ludwig: start task
+ludwig -> workflow: start workflow
+
+activate workflow
+
+workflow -> cli: run command
+activate cli
+return done
+deactivate cli
+
+
+deactivate workflow
+
+@enduml

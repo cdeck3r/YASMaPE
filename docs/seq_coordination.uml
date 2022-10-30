@@ -20,7 +20,7 @@ deactivate dir
 jup -> q: consume
 q --> jup: task 'create_feature'
 
-create "<<snakemake>>\nworkflow" as workflow
+create "workflow" as workflow <<snakemake>>
 jup -> workflow: start workflow\n'create_feature'
 workflow -> workflow: create_feature
 activate workflow
