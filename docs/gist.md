@@ -2,8 +2,17 @@
 
 gists are small code snippets and other paste-style docs which are discovered during the development of YASMaPE.
 
-_TODO: add toc__
+<!--ts-->
+   * [Download stock data](#download-stock-data)
+   * [Run jupyter notebook from command line](#run-jupyter-notebook-from-command-line)
+   * [Creating UML diagrams from docker-compose.yml](#creating-uml-diagrams-from-docker-composeyml)
+   * [Creating svg images from snakemake rulegraphs](#creating-svg-images-from-snakemake-rulegraphs)
+   * [Add a TOC to Markdown Files](#add-a-toc-to-markdown-files)
 
+<!-- Created by https://github.com/ekalinin/github-markdown-toc -->
+<!-- Added by: root, at: Sun Oct 30 10:00:28 UTC 2022 -->
+
+<!--te-->
 
 ## Download stock data
 
@@ -83,3 +92,20 @@ docker run --rm -it --name dcv -v /home/user/blog:/input pmsipilot/docker-compos
 Using the command `snakemake --rulegraph` snakemake outputs a dot formatted graph of the DAG formed from the rules. We feed the online REST API from https://quickchart.io/documentation/graphviz-api/ with the dot formatted rulegraph. 
 
 Have a look at [`../src/ludwig/generate_rulegraph.sh`](../src/ludwig/generate_rulegraph.sh).
+
+## Add a TOC to Markdown Files
+
+YASMaPE utilizes [gh-md-toc](https://github.com/ekalinin/github-markdown-toc) to generate and insert a TOC into markdown (`.md`) files.
+
+In the `.md` file add the marker where you want to have the TOC appear.
+```
+<!--ts-->
+<!--te-->
+```
+
+Afterwards run the `gh-md-toc` with the following options to include or update the TOC.
+```
+gh-md-toc --insert --skip-header README.md
+```
+
+The YASMaPE image comes with `gh-md-toc` installed.
