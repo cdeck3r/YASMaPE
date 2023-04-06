@@ -1,0 +1,186 @@
+"""Run stock correlation analysis
+
+Example call:
+snakemake --cores all 
+
+"""
+
+##############################
+# imports
+##############################
+
+import sys
+import os
+import pathlib
+import itertools
+import datetime
+from datetime import timezone, timedelta
+
+##############################
+# Configuration
+##############################
+
+# config anchor
+workdir: "/YASMaPE/src/stock_correl"
+configfile: "config.yaml"
+
+# paths to notebook directory from config.yaml
+NOTEBOOK_DIR = config["NOTEBOOK_DIR"]
+
+# paths to data directory from config.yaml
+DATA_ROOT_DIR = config["DATA_ROOT_DIR"] if "DATA_ROOT_DIR" in config is not None else sys.exit("No DATA_ROOT_DIR found in config.yaml")
+
+# stock symbols, we need two groups for the correlation analysis 
+STOCK1 = config["STOCK1"] if "STOCK1" in config is not None else sys.exit("No stock symbols found. Check config.yaml")
+STOCK2 = config["STOCK2"] if "STOCK2" in config is not None else STOCK1
+STOCK_CORREL = itertools.product(STOCK1, STOCK2)
+
+# 
+# TODAY,PASTDAY,DAYSBACK serves a sensible default values
+#
+DAYSBACK = config["DAYSBACK"] if "DAYSBACK" in config is not None else 100
+today = datetime.date.today()
+pastday = today - datetime.timedelta(DAYSBACK)
+pastday = datetime.datetime.fromordinal(pastday.toordinal())
+PASTDAY = int(pastday.replace(tzinfo=timezone.utc).timestamp())
+today = datetime.datetime.fromordinal(today.toordinal())
+TODAY = int(today.replace(tzinfo=timezone.utc).timestamp())
+
+
+# params from CLI
+PERIOD_FROM = str(config["PERIOD_FROM"]) if "PERIOD_FROM" in config is not None else PASTDAY
+PERIOD_TO = str(config["PERIOD_TO"]) if "PERIOD_TO" in config is not None else TODAY
+
+# Directories
+# DATA_ROOT_DIR
+#   stock_csv
+#   intermediate
+#   results
+#   evaluate
+STOCK_CSV_DIR = os.path.join(DATA_ROOT_DIR, "stock_csv")
+INTERMED_DIR = os.path.join(DATA_ROOT_DIR, "intermediate")
+RESULT_DIR = os.path.join(DATA_ROOT_DIR, "results")
+EVAL_DIR = os.path.join(DATA_ROOT_DIR, "evaluate")
+
+# Files
+# ...
+
+
+##############################
+# End of Configuration
+##############################
+
+##############################
+# Rules start here
+##############################
+
+# a pseudo-rule that collects the target files
+rule all:
+    input:
+        # Format: EVAL_DIR/stock1_stock2_eval.parquet
+        #[os.path.join(EVAL_DIR, "{stock1}_{stock2}_eval.parquet".format(stock1=s[0], stock2=s[1])) for s in STOCK_CORREL]
+        expand(EVAL_DIR + "/" + "{stock1}_{stock2}_eval.parquet", stock1=STOCK1, stock2=STOCK2),
+
+##############################
+# Preprocessing
+##############################
+
+rule download_stock_data:
+    output:
+        stock_csv=STOCK_CSV_DIR + "/" + "{stock}.csv",
+    wildcard_constraints:
+        stock=".[^_]+",
+    params:
+        urlendpoint="https://query1.finance.yahoo.com/v7/finance/download",
+        urlparams="interval=1d&events=history&includeAdjustedClose=true",
+    shell:
+        "curl -L -o {output.stock_csv} \"{params.urlendpoint}/{wildcards.stock}?period1={PERIOD_FROM}&period2={PERIOD_TO}&{params.urlparams}\" "
+
+rule cp_csv_to_intermediate_dir:
+    input:
+        rules.download_stock_data.output
+    output:
+        temp(INTERMED_DIR + "/" + "{stock}.csv"),
+    shell:
+        "cp {input} {output}"
+
+
+rule data_preparation:
+    input:
+        # wire the previous output to this rule's input
+        rules.cp_csv_to_intermediate_dir.output
+    output:
+        INTERMED_DIR + "/" + "{stock}.parquet",
+    wildcard_constraints:
+        stock=".[^_]+",
+    params:
+        remove_cell_tags="render",
+        kernel="--kernel python3",
+        other="--progress-bar",
+    shell:
+        "jupyter nbconvert {NOTEBOOK_DIR}/stock_correl_dataprep.ipynb --to=notebook --stdout --TagRemovePreprocessor.enabled=True --TagRemovePreprocessor.remove_cell_tags {params.remove_cell_tags} | papermill {params.kernel} {params.other} -p input_csv_file {input} - - >/dev/null"
+
+rule compile_dataset:
+    input:
+        stock1_parq=INTERMED_DIR + "/" + "{stock1}.parquet",
+        stock2_parq=INTERMED_DIR + "/" + "{stock2}.parquet",
+    output:
+        INTERMED_DIR + "/" + "{stock1}_{stock2}.parquet",
+    wildcard_constraints:
+        stock1=".[^_]+",
+        stock2=".[^_]+",
+    params:
+        kernel="--kernel python3",
+        other="--progress-bar",
+    shell:
+        "papermill {params.kernel} {params.other} -p input_file_1 {input.stock1_parq} -p input_file_2 {input.stock2_parq} {NOTEBOOK_DIR}/stock_correl_compile.ipynb - >/dev/null" 
+
+rule cp_dataset_to_result_dir:
+    input:
+        rules.compile_dataset.output
+    output:
+        temp(RESULT_DIR + "/" + "{stock1}_{stock2}.parquet"),
+    shell:
+        "cp {input} {output}"
+
+
+##############################
+# Statistical Analysis
+##############################
+
+# example:
+# jupyter nbconvert /YASMaPERepo/notebooks/stock_correl.ipynb --to=notebook --stdout --TagRemovePreprocessor.enabled=True --TagRemovePreprocessor.remove_cell_tags render | papermill --kernel python3 --progress-bar -p input_file /YASMaPERepo/notebooks/SMI.CH_IXX.DE.parquet - - > /dev/null
+
+rule stats_analysis:
+    input:
+        rules.compile_dataset.output
+    output:
+        temp(INTERMED_DIR + "/" + "{stock1}_{stock2}_stats.parquet"),
+    params:
+        remove_cell_tags="render",
+        kernel="--kernel python3",
+        other="--progress-bar",
+    shell:
+        "jupyter nbconvert {NOTEBOOK_DIR}/stock_correl.ipynb --to=notebook --stdout --TagRemovePreprocessor.enabled=True --TagRemovePreprocessor.remove_cell_tags {params.remove_cell_tags} | papermill {params.kernel} {params.other} -p input_file {input} - - >/dev/null" 
+
+rule cp_stats_to_result_dir:
+    input:
+        rules.stats_analysis.output
+    output:
+        RESULT_DIR + "/" + "{stock1}_{stock2}_stats.parquet",
+    shell:
+        "cp {input} {output}"
+
+##############################
+# Evaluate
+##############################
+
+rule evaluate:
+    input:
+        stats=rules.cp_stats_to_result_dir.output,
+        corr=rules.cp_dataset_to_result_dir.output,
+    output:
+        EVAL_DIR + "/" + "{stock1}_{stock2}_eval.parquet",
+    shell:
+        "touch {output} && echo evaluate {input.stats} {input.corr} && echo output: {output}"
+        

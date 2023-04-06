@@ -1,0 +1,32 @@
+#
+# Configuration for stock_correl workflow
+#
+# This config file exists to remark explicitly
+# the configuration of directories 
+#
+
+# Directory of jupyter notebooks to run
+NOTEBOOK_DIR: "/YASMaPERepo/notebooks"
+
+# Root of all data
+# The workflow creates subdirectories in this directory
+DATA_ROOT_DIR: "/YASMaPE/data/stock_correl"
+
+# Stock symbols
+# - two lists, STOCK1 and STOCK2, contain the stock symbols for correlation
+# - Definition of STOCK1 is required
+# - If STOCK2 is omitted, STOCK2 = STOCK1 is assumed.
+STOCK1: ["IXX.DE", "MUX.DE"]
+
+# Time periods for stock data, i.e. from/to dates
+# - if omitted, the periods are [today - DAYSBACK, today]
+#
+# Example: 
+# PERIOD_FROM: ...
+# PERIOD_TO: ...
+
+# number of days back from today's date, if above periods omitted
+DAYSBACK: 500
+
+# Use at most N CPU cores/jobs in parallel.
+CORES: 1
